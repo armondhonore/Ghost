@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import {enforceVideoCardInlinePlayback, sanitizeHtml, stripHtml} from '../../../src/utils/content-formatters';
+import {enforceVideoCardInlinePlayback, renderTwitterEmbedsInSandbox, sanitizeHtml, stripHtml} from '../../../src/utils/content-formatters';
 
 function sanitizeStrippedHtml(html: string, exclude: string[] = ['a']) {
     return sanitizeHtml(stripHtml(html, exclude));
@@ -160,6 +160,45 @@ describe('Content Formatters', function () {
             expect(div.querySelector('a')).toBeNull();
             expect(div.querySelector('br')).toBeNull();
             expect(div.textContent).toBe('Hello safe link Bold');
+        });
+    });
+
+    describe('renderTwitterEmbedsInSandbox', function () {
+        it('moves Twitter widget loading into a sandboxed iframe and strips article scripts', function () {
+            const result = renderTwitterEmbedsInSandbox(`
+                <p>Before the Twitter embed.</p>
+                <blockquote class="twitter-tweet">
+                    <p lang="en" dir="ltr">Ghost ActivityPub renders this embedded post without trusting remote ActivityPub scripts.</p>
+                    <a href="https://twitter.com/ghost_security/status/1234567890123456789">March 20, 2025</a>
+                </blockquote>
+                <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+                <script>window.__xss=true</script>
+                <p>After the Twitter embed.</p>
+            `, {
+                fontSize: '2rem',
+                fontStyle: 'serif',
+                sepia: true
+            });
+
+            const div = renderHtml(result);
+            const iframe = div.querySelector('iframe[data-gh-twitter-embed]') as HTMLIFrameElement;
+
+            expect(div.querySelector('script')).toBeNull();
+            expect(iframe).not.toBeNull();
+            expect(iframe.getAttribute('sandbox')).toContain('allow-scripts');
+            expect(iframe.getAttribute('sandbox')).toContain('allow-popups');
+            expect(iframe.getAttribute('sandbox')).not.toContain('allow-same-origin');
+            expect(iframe.style.maxWidth).toBe('');
+            expect(iframe.style.margin).toBe('0px');
+            expect(iframe.getAttribute('srcdoc')).toContain('https://platform.twitter.com/widgets.js');
+            expect(iframe.getAttribute('srcdoc')).toContain('class="twitter-tweet"');
+            expect(iframe.getAttribute('srcdoc')).toContain('class="has-serif-body"');
+            expect(iframe.getAttribute('srcdoc')).toContain('--font-size: 2rem');
+            expect(iframe.getAttribute('srcdoc')).toContain('--font-size-multiplier: 1.1');
+            expect(iframe.getAttribute('srcdoc')).toContain('color: #DD6B02 !important');
+            expect(iframe.getAttribute('srcdoc')).toContain('Ghost ActivityPub renders this embedded post');
+            expect(div.textContent).toContain('Before the Twitter embed.');
+            expect(div.textContent).toContain('After the Twitter embed.');
         });
     });
 });

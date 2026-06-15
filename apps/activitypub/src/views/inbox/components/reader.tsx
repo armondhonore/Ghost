@@ -20,7 +20,7 @@ import articleBodyStyles from '@src/components/article-body-styles';
 import getReadingTime from '../../../utils/get-reading-time';
 import {Activity} from '@src/api/activitypub';
 import {cardsCSS, cardsJS} from '@src/utils/cards-assets';
-import {enforceVideoCardInlinePlayback, escapeHtml, isSafeUrl, openLinksInNewTab} from '@src/utils/content-formatters';
+import {enforceVideoCardInlinePlayback, escapeHtml, isSafeUrl, openLinksInNewTab, renderTwitterEmbedsInSandbox} from '@src/utils/content-formatters';
 import {handleProfileClick} from '@src/utils/handle-profile-click';
 import {isPendingActivity} from '../../../utils/pending-activity';
 import {useDebounce} from 'use-debounce';
@@ -71,8 +71,13 @@ const ArticleBody: React.FC<{
     const shouldEnforceVideoCardInlinePlayback = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
     const articleHtml = useMemo(() => {
         const transformedHtml = shouldEnforceVideoCardInlinePlayback ? enforceVideoCardInlinePlayback(html) : html;
-        return openLinksInNewTab(transformedHtml);
-    }, [html, shouldEnforceVideoCardInlinePlayback]);
+        return renderTwitterEmbedsInSandbox(openLinksInNewTab(transformedHtml), {
+            fontSize,
+            fontStyle: fontStyle === 'serif' ? 'serif' : 'sans',
+            darkMode,
+            sepia: backgroundColor === 'SEPIA'
+        });
+    }, [backgroundColor, darkMode, fontSize, fontStyle, html, shouldEnforceVideoCardInlinePlayback]);
 
     const htmlContent = `
         <html class="has-${!darkMode ? 'dark' : 'light'}-text has-${fontStyle}-body ${backgroundColor === 'SEPIA' && 'has-sepia-bg'}">
@@ -149,9 +154,40 @@ const ArticleBody: React.FC<{
                     })).then(resizeIframe);
                 }
 
+                function resizeTwitterEmbed(event) {
+                    const data = event.data || {};
+
+                    if (data.type !== 'ghost-twitter-embed-resize') {
+                        return false;
+                    }
+
+                    const height = Number(data.height);
+
+                    if (!Number.isFinite(height)) {
+                        return true;
+                    }
+
+                    const boundedHeight = Math.min(Math.max(height, 120), 1200);
+                    const frames = document.querySelectorAll('iframe[data-gh-twitter-embed]');
+
+                    for (const frame of frames) {
+                        if (frame.contentWindow === event.source) {
+                            frame.style.height = boundedHeight + 'px';
+                            break;
+                        }
+                    }
+
+                    resizeIframe();
+                    return true;
+                }
+
                 // Handle external resize triggers
                 window.addEventListener('message', (event) => {
-                    if (event.data.type === 'triggerResize') {
+                    if (resizeTwitterEmbed(event)) {
+                        return;
+                    }
+
+                    if (event.data && event.data.type === 'triggerResize') {
                         resizeIframe();
                     }
                 });

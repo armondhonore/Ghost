@@ -1,6 +1,17 @@
 import DOMPurify from 'dompurify';
 
 const SAFE_URL_PROTOCOLS = ['http:', 'https:', 'mailto:'];
+const TWITTER_WIDGET_SCRIPT_URL = 'https://platform.twitter.com/widgets.js';
+const TWITTER_EMBED_MIN_HEIGHT = 120;
+const TWITTER_EMBED_INITIAL_HEIGHT = 240;
+const TWITTER_EMBED_MAX_HEIGHT = 1200;
+
+interface TwitterEmbedSandboxOptions {
+    fontSize?: string;
+    fontStyle?: 'sans' | 'serif';
+    darkMode?: boolean;
+    sepia?: boolean;
+}
 
 export function isSafeUrl(url: string): boolean {
     try {
@@ -134,6 +145,166 @@ export const openLinksInNewTab = (content: string) => {
         }
         links[i].setAttribute('target', '_blank');
         links[i].setAttribute('rel', 'noopener noreferrer');
+    }
+
+    return div.innerHTML;
+};
+
+const buildTwitterEmbedSrcDoc = (blockquoteHtml: string, options: TwitterEmbedSandboxOptions = {}) => {
+    const fontSize = options.fontSize || '1.7rem';
+    const fontSizeMultiplier = options.fontStyle === 'serif' ? '1.1' : '1';
+    const textColor = options.darkMode ? '#fff' : '#15171a';
+    const secondaryTextColor = options.darkMode ? 'rgb(255 255 255 / 0.64)' : 'rgb(124 139 154)';
+    const linkColor = options.sepia ? '#DD6B02' : '#14B8FF';
+    const bodyClass = options.fontStyle === 'serif' ? 'has-serif-body' : 'has-sans-body';
+
+    return `<!doctype html>
+<html>
+<head>
+    <base target="_blank">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            --color-primary-text: ${textColor};
+            --color-secondary-text: ${secondaryTextColor};
+            --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+            --font-serif-alt: Georgia, Times, serif;
+            --font-size: ${fontSize};
+            --font-size-multiplier: ${fontSizeMultiplier};
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        * {
+            margin: 0;
+        }
+
+        html {
+            font-size: 62.5%;
+        }
+
+        html,
+        body {
+            padding: 0;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        body {
+            min-width: 0;
+            color: var(--color-primary-text);
+            font-family: var(--font-sans);
+            font-size: calc(var(--font-size) * var(--font-size-multiplier));
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .has-serif-body blockquote.twitter-tweet {
+            font-family: var(--font-serif-alt);
+        }
+
+        blockquote.twitter-tweet {
+            width: 100% !important;
+            max-width: none !important;
+            padding: 0 !important;
+            border: 0 !important;
+        }
+
+        iframe.twitter-tweet-rendered,
+        .twitter-rendered-card {
+            margin: 0 auto !important;
+            max-width: 550px;
+        }
+
+        blockquote.twitter-tweet a:not([class]),
+        .twitter-rendered-card__meta a {
+            color: ${linkColor} !important;
+            text-decoration: underline !important;
+        }
+
+    </style>
+</head>
+<body class="${bodyClass}">
+    ${blockquoteHtml}
+    <script>
+        (function () {
+            const minHeight = ${TWITTER_EMBED_MIN_HEIGHT};
+            const maxHeight = ${TWITTER_EMBED_MAX_HEIGHT};
+
+            function getHeight() {
+                const elements = Array.from(document.body.children).filter(function (element) {
+                    return element.tagName !== 'SCRIPT';
+                });
+                const contentHeight = elements.reduce(function (maxHeight, element) {
+                    return Math.max(maxHeight, element.getBoundingClientRect().bottom);
+                }, 0);
+
+                return Math.min(Math.max(
+                    Math.ceil(contentHeight),
+                    minHeight
+                ), maxHeight);
+            }
+
+            function sendHeight() {
+                window.parent.postMessage({
+                    type: 'ghost-twitter-embed-resize',
+                    height: getHeight()
+                }, '*');
+            }
+
+            if (typeof ResizeObserver === 'function') {
+                new ResizeObserver(sendHeight).observe(document.body);
+            }
+
+            document.addEventListener('DOMContentLoaded', sendHeight);
+            window.addEventListener('load', sendHeight);
+
+            let attempts = 0;
+            const interval = window.setInterval(function () {
+                sendHeight();
+                attempts += 1;
+
+                if (attempts > 20) {
+                    window.clearInterval(interval);
+                }
+            }, 250);
+        })();
+    </script>
+    <script async src="${TWITTER_WIDGET_SCRIPT_URL}" charset="utf-8"></script>
+</body>
+</html>`;
+};
+
+export const renderTwitterEmbedsInSandbox = (content: string, options: TwitterEmbedSandboxOptions = {}) => {
+    const div = document.createElement('div');
+    div.innerHTML = content;
+
+    div.querySelectorAll('script').forEach(script => script.remove());
+
+    const blockquotes = Array.from(div.querySelectorAll('blockquote.twitter-tweet'));
+
+    for (const blockquote of blockquotes) {
+        const iframe = document.createElement('iframe');
+
+        iframe.className = 'gh-twitter-embed';
+        iframe.title = 'Embedded Twitter post';
+        iframe.srcdoc = buildTwitterEmbedSrcDoc((blockquote as HTMLElement).outerHTML, options);
+        iframe.setAttribute('data-gh-twitter-embed', '');
+        iframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox');
+        iframe.style.width = '100%';
+        iframe.style.height = `${TWITTER_EMBED_INITIAL_HEIGHT}px`;
+        iframe.style.border = '0';
+        iframe.style.display = 'block';
+        iframe.style.margin = '0';
+        iframe.style.overflow = 'hidden';
+
+        blockquote.replaceWith(iframe);
     }
 
     return div.innerHTML;
