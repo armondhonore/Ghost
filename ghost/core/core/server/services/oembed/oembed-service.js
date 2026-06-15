@@ -286,11 +286,23 @@ class OEmbedService {
             };
         }
 
-        const pickFn = (sizes, pickDefault) => {
+        const pickFn = async (sizes, {gotOpts: faviconGotOpts, pickBiggerSize, resolveFaviconUrl}) => {
             // Prioritize apple touch icon with sizes > 180
             const appleTouchIcon = sizes.find(item => item.rel?.includes('apple') && item.sizes && item.size.width >= 180);
             const svgIcon = sizes.find(item => item.href?.endsWith('svg'));
-            return appleTouchIcon || svgIcon || pickDefault(sizes);
+            const preferredIcon = appleTouchIcon || svgIcon;
+
+            if (preferredIcon) {
+                const response = await resolveFaviconUrl(preferredIcon.url, undefined, faviconGotOpts);
+                if (response !== undefined) {
+                    return response.url;
+                }
+            }
+
+            return pickBiggerSize(sizes, {
+                gotOpts: faviconGotOpts,
+                resolveFaviconUrl
+            });
         };
 
         const metascraper = require('metascraper')([
