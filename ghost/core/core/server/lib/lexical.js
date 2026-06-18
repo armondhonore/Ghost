@@ -18,6 +18,18 @@ function populateNodes() {
     nodes = DEFAULT_NODES;
 }
 
+function createLexicalHtmlRenderer(onError) {
+    if (!nodes) {
+        populateNodes();
+    }
+
+    const {LexicalHTMLRenderer} = require('@tryghost/kg-lexical-html-renderer');
+    return new LexicalHTMLRenderer({
+        nodes,
+        onError
+    });
+}
+
 module.exports = {
     get blankDocument() {
         return {
@@ -43,12 +55,7 @@ module.exports = {
 
     get lexicalHtmlRenderer() {
         if (!lexicalHtmlRenderer) {
-            if (!nodes) {
-                populateNodes();
-            }
-
-            const {LexicalHTMLRenderer} = require('@tryghost/kg-lexical-html-renderer');
-            lexicalHtmlRenderer = new LexicalHTMLRenderer({nodes});
+            lexicalHtmlRenderer = createLexicalHtmlRenderer();
         }
 
         return lexicalHtmlRenderer;
@@ -104,6 +111,21 @@ module.exports = {
         }, userOptions);
 
         return await this.lexicalHtmlRenderer.render(lexical, options);
+    },
+
+    async validate(lexical, userOptions = {}) {
+        try {
+            const lexicalValidationRenderer = createLexicalHtmlRenderer((error) => {
+                throw error;
+            });
+
+            // The validation renderer rethrows parser errors so this method can
+            // convert every malformed document into a boolean result.
+            await lexicalValidationRenderer.render(lexical, userOptions);
+            return true;
+        } catch {
+            return false;
+        }
     },
 
     get nodes() {
