@@ -1,0 +1,33 @@
+application:
+  name: ghost-blog
+  pods:
+    - name: ghost
+      image: ghost:5-alpine
+      path: /
+      servicePorts:
+        - 2368
+      vars:
+        database__client: mysql
+        database__connection__host: mysql.pod
+        database__connection__port: "3306"
+        database__connection__user: ghost
+        database__connection__password: ghostpassword
+        database__connection__database: ghost
+        url: "<%URL%>"
+      volumes:
+        - name: content
+          mountPath: /var/lib/ghost/content
+          size: 5Gi
+    - name: mysql
+      image: mysql:8.0
+      servicePorts:
+        - 3306
+      vars:
+        MYSQL_ROOT_PASSWORD: rootpassword
+        MYSQL_DATABASE: ghost
+        MYSQL_USER: ghost
+        MYSQL_PASSWORD: ghostpassword
+      volumes:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+          size: 5Gi
