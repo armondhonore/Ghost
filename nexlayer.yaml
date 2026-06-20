@@ -1,33 +1,28 @@
 application:
-  name: ghost-blog
+  name: ghost-cms
   pods:
-    - name: ghost
-      image: ghost:5-alpine
+    - name: app
+      image: "registry.nexlayer.io/user_01kece1xyh817dwff7wnarhkxd/ghost:19ee6094388"
       path: /
       servicePorts:
         - 2368
       vars:
-        database__client: mysql
-        database__connection__host: mysql.pod
-        database__connection__port: "3306"
-        database__connection__user: ghost
-        database__connection__password: ghostpassword
-        database__connection__database: ghost
-        url: "<%URL%>"
-      volumes:
-        - name: content
-          mountPath: /var/lib/ghost/content
-          size: 5Gi
+        url: "<% URL %>"
+        database__client: "mysql"
+        database__connection__host: "mysql.pod"
+        database__connection__user: "ghost"
+        database__connection__password: "ghostpassword"
+        database__connection__database: "ghost"
     - name: mysql
-      image: mysql:8.0
+      image: mirror.gcr.io/library/mysql:8
       servicePorts:
         - 3306
       vars:
-        MYSQL_ROOT_PASSWORD: rootpassword
-        MYSQL_DATABASE: ghost
-        MYSQL_USER: ghost
-        MYSQL_PASSWORD: ghostpassword
+        MYSQL_ROOT_PASSWORD: "rootpassword"
+        MYSQL_DATABASE: "ghost"
+        MYSQL_USER: "ghost"
+        MYSQL_PASSWORD: "ghostpassword"
       volumes:
         - name: mysql-data
+          size: 10Gi
           mountPath: /var/lib/mysql
-          size: 5Gi
