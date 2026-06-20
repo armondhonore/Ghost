@@ -15,7 +15,7 @@
 
 ## Project Summary
 <!-- nexlayer:section agent-managed=project_summary -->
-Ghost is a professional open-source headless Node.js CMS and publishing platform used for creating blogs and newsletters.
+Ghost is a professional headless Node.js CMS and publishing platform. It provides a full-featured administration interface for content creation and a flexible API for front-end delivery.
 <!-- nexlayer:end -->
 
 ## Technology Stack
@@ -24,17 +24,17 @@ Ghost is a professional open-source headless Node.js CMS and publishing platform
 |------|------|---------|---------------|
 | Node.js | language | 22.18.0 | .node-version, package.json |
 | pnpm | tool | 11.6.0 | package.json |
-| NX | build | not-specified | nx.json, package.json |
-| Vite | build | not-specified | apps/activitypub/package.json |
-| MySQL | database | not-specified | README.md |
+| Nx | build | unknown | nx.json |
+| Vite | build | catalog | apps/activitypub/package.json |
+| MySQL | database | unknown | README.md |
 <!-- nexlayer:end -->
 
 ## Repository Structure
 <!-- nexlayer:section agent-managed=structure_map -->
-- ghost/ — Core Ghost CMS logic and server
-- apps/ — Independent frontend applications and plugins (activitypub, admin, etc.)
-- e2e/ — End-to-end test suite
-- docker/ — Containerization configurations
+- ghost/ — Core CMS engine and server-side logic
+- apps/ — Independent UI components and services (admin, activitypub, portal, etc.)
+- e2e/ — End-to-end testing suite
+- docker/ — Containerization configurations for local development
 <!-- nexlayer:end -->
 
 ## External Services Required
@@ -105,7 +105,7 @@ application:
   name: ghost-cms
   pods:
     - name: app
-      image: "registry.nexlayer.io/user_01kece1xyh817dwff7wnarhkxd/ghost:19ee6094388"
+      image: "registry.nexlayer.io/user_01kece1xyh817dwff7wnarhkxd/ghost:19ee62367e2"
       path: /
       servicePorts:
         - 2368
@@ -130,7 +130,6 @@ application:
           size: 10Gi
           mountPath: /var/lib/mysql
 ```
-
 <!-- nexlayer:end -->
 
 ## Nexlayer Deployment Plan
@@ -157,7 +156,7 @@ application:
 
 ## Nexlayer Configuration
 <!-- nexlayer:section agent-managed=nexlayer_config -->
-**Last deployed:** 2026-06-20T17:19:51Z  
+**Last deployed:** 2026-06-20T17:47:08Z  
 **Live URL:** https://relaxed-weasel-ghost-cms.cloud.nexlayer.ai  
 **Runtime:**  · **Port:** auto-detected  
 **Deploy branch:** nexlayer  
@@ -167,7 +166,7 @@ application:
   name: ghost-cms
   pods:
     - name: app
-      image: "registry.nexlayer.io/user_01kece1xyh817dwff7wnarhkxd/ghost:19ee6094388"
+      image: "registry.nexlayer.io/user_01kece1xyh817dwff7wnarhkxd/ghost:19ee62367e2"
       path: /
       servicePorts:
         - 2368
@@ -198,6 +197,7 @@ application:
 <!-- nexlayer:section agent-managed=build_history -->
 | Date | Status | Notes |
 |------|--------|-------|
-| 2026-06-20T17:17:42Z | analyzed | initial repo analysis |
-| 2026-06-20T17:19:51Z | success | deployed https://relaxed-weasel-ghost-cms.cloud.nexlayer.ai |
+| 2026-06-20T17:46:06Z | analyzed | initial repo analysis |
+| 2026-06-20T17:47:08Z | success | deployed https://relaxed-weasel-ghost-cms.cloud.nexlayer.ai |
 <!-- nexlayer:end -->
+
