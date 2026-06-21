@@ -7,12 +7,20 @@ application:
       servicePorts:
         - 2368
       vars:
-        url: "<% URL %>"
+        # Edge terminates TLS and forwards plain HTTP without X-Forwarded-Proto, so Ghost
+        # (url=https) 301-loops http→https and the health check 503s. Use the http scheme so
+        # Ghost serves 200 over the proxied HTTP. Stopgap (http asset links → mixed content);
+        # the real fix is the edge sending X-Forwarded-Proto: https.
+        url: "http://relaxed-weasel-ghost-cms.cloud.nexlayer.ai"
         database__client: "mysql"
         database__connection__host: "mysql.pod"
         database__connection__user: "ghost"
         database__connection__password: "ghostpassword"
         database__connection__database: "ghost"
+      volumes:
+        - name: content
+          mountPath: /var/lib/ghost/content
+          size: 5Gi
     - name: mysql
       image: mirror.gcr.io/library/mysql:8
       servicePorts:
